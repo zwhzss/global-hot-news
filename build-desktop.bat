@@ -8,7 +8,7 @@ REM
 REM The installer is produced by "wails build -nsis", which bundles the
 REM Microsoft WebView2 bootstrapper, so the target machine does not need
 REM WebView2 pre-installed. The previous hand-written NSIS script has been
-REM retired (see git history / AUDIT_REPORT.md section 4.1).
+REM retired (see git history / docs/AUDIT_REPORT.md section 4.1).
 REM ============================================================
 
 setlocal enabledelayedexpansion
