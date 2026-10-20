@@ -1,0 +1,161 @@
+基于架构文档中插件化采集子系统的设计（支持RSS/Atom、Open API、HTML列表页三种适配器），以下为你整理中国国内可合规访问的公开数据源，按新闻类型分类，并标注接入方式与合规要点。
+
+一、综合新闻类
+1.1 官方权威源（最高优先级）
+人民网 RSS
+
+接入方式：RSS Atom
+
+可用地址：
+
+时政：http://www.people.com.cn/rss/politics.xml
+
+军事：http://www.people.com.cn/rss/military.xml
+
+全部新闻：http://www.people.com.cn/rss/ywkx.xml
+
+台港澳：http://www.people.com.cn/rss/haixia.xml
+
+合规说明：人民网为中央重点新闻网站，列入《互联网新闻信息稿源单位名单》。RSS内容为公开聚合新闻，仅含标题、摘要、链接，符合文档“只抓取事实性元数据”的约束。
+
+新华网 RSS
+
+接入方式：RSS Atom
+
+可用地址：
+
+时政频道：http://www.xinhuanet.com/politics/news_politics.xml
+
+国内新闻：http://rss.xinhuanet.com/rss/native.xml
+
+国际新闻：http://rss.xinhuanet.com/rss/world.xml
+
+合规说明：新华网同为中央新闻单位，其RSS聚合新闻服务面向个人非商业用途免费提供。
+
+中国新闻网 RSS
+
+接入方式：RSS Atom
+
+说明：中新社主办，属国家规定范围内的新闻单位，可通过其RSS订阅中心获取时政、财经、社会等频道Feed。
+
+1.2 商业门户综合源
+ClawHub整理的国内新闻RSS源可直接用于RssAtomSource适配器：
+
+来源	RSS地址	内容侧重
+新浪新闻	rss.sina.com.cn	综合新闻
+搜狐新闻	rss.sohu.com	综合
+凤凰新闻	rss.ifeng.com	时政
+这些源已在ClawHub的China News技能中实测可用，支持RSS订阅模式，无需API Key，数据不上传外部服务器。
+
+合规注意：商业门户转载新闻须遵守《互联网新闻信息服务管理规定》第十五条，转载中央新闻单位发布的新闻信息并注明来源。采集时仅保存标题、摘要、origin_url，正文通过WebView跳转阅读，完全符合文档的“不落地正文”要求。
+
+二、财经类
+2.1 财联社/东方财富/同花顺（通过本地RSS转换）
+架构文档中RssAtomSource适配器可直接消费标准RSS。对于没有原生RSS的财经快讯源，可通过本地RSS转换工具接入：
+
+财联社电报：实时快讯
+
+东方财富：7×24快讯
+
+同花顺：7×24快讯
+
+以上三个源使用其网页端本身在调用的公开接口，无需登录，无额外依赖。建议在Go后端实现一个轻量级适配层，将上游JSON响应转换为RawNewsItem结构体，而非引入Python中间件。
+
+2.2 新华财经MCP服务矩阵
+新华财经已推出MCP服务矩阵，构建六大类MCP服务体系、30+核心MCP服务，定位为国家级金融AI数据合规基座。可作为后续迭代中OpenApiSource适配器的高优先级接入目标，但需确认个人非商用场景下的访问权限。
+
+2.3 金融时报中文网
+行业新闻Agent配置中已包含金融时报中文的RSS源，属国际财经媒体的中文版本，RSS可直连订阅。
+
+三、科技类
+3.1 原生RSS源（可直接接入）
+以下地址已在Themia桌面RSS教程中实测可用：
+
+来源	RSS地址	内容
+少数派	https://sspai.com/feed	数字生活效率
+爱范儿	https://www.ifanr.com/feed	科技数码媒体
+IT之家	https://www.ithome.com/rss/	科技资讯
+Solidot	https://www.solidot.org/index.rss	科技新闻
+36氪	通过RSSHub路由获取	创投科技媒体
+虎嗅	https://rss.huxiu.com/	商业科技媒体
+3.2 行业媒体RSS
+Industry News Agent已配置的科技媒体源包括36氪、虎嗅、雷锋网（AI/智能硬件）、少数派、爱范儿。这些源均通过RSS订阅获取，无需API Key，符合文档“温和采集”要求。
+
+3.3 AI/前沿科技专项源
+LobeHub的news技能支持以下AI类RSS源，可作为科技视图的二级分类（如“人工智能”子类）：
+
+MIT Technology Review：AI与前沿技术深度报道
+
+量子位 / 机器之心：中文AI垂直媒体（2026年实测RSS可用）
+
+Hacker News：英文科技讨论社区，https://news.ycombinator.com/rss
+
+注意：LobeHub文档指出，OpenAI Blog、Google AI Blog、DeepMind Blog等网站会返回403/404，阻止直接抓取，应优先通过RSS获取元数据而非抓取原文页面。
+
+四、军事类
+4.1 合规约束（关键）
+《互联网军事信息传播管理办法》（2025年3月1日施行）第十八条明确规定：转载军事新闻信息，应当转载中央新闻单位或国家规定范围内的单位发布的新闻信息；涉及军队重大决策部署、重大军事行动、重要武器装备建设等内容，应当转载中央和军队主要媒体的权威信息。
+
+4.2 推荐源
+来源	接入方式	说明
+中国军网	RSS/HTML列表	中央军委机关报《解放军报》官网，列入稿源单位名单
+人民网军事频道	http://www.people.com.cn/rss/military.xml	人民网RSS军事栏目
+新华网军事频道	通过新华网RSS订阅中心获取	中央新闻单位军事报道
+国防部官网	HTML列表页	官方防务政策发布
+合规操作建议：军事视图的采集器应设置更严格的过滤规则。在source_filter_rules中为军事类数据源绑定私有过滤规则，对“武器装备参数”“部队部署”等敏感关键词进行拦截，命中即丢弃并仅记录filter_logs的content_hash，严格遵循文档“违规内容绝不落地”的约束。
+
+五、政治类
+5.1 核心源
+来源	接入方式	频道
+人民网时政	http://www.people.com.cn/rss/politics.xml	时政新闻
+新华网时政	http://www.xinhuanet.com/politics/news_politics.xml	时政频道
+中国政府网	HTML列表页/官方API	国务院要闻、政策发布
+央视网	RSS	时政要闻
+5.2 稿源合规
+《互联网新闻信息稿源单位名单》（截至2025年6月）列出的中央新闻单位包括人民网、新华网、央视网、央广网、中国日报网、中国新闻网等286家。政治类采集器应仅从该名单内的单位获取数据源，这是合规底线。
+
+5.3 与分类视图的配合
+政治类资讯在入库后，通过article_categories多对多关联表打上“政治”主分类标签。推荐页可通过user_profile中的分类权重计算政治类资讯的推荐分数。
+
+六、经济类
+6.1 国家统计局（官方数据源，强烈推荐）
+国家统计局提供RSS内容服务，方便即时自动获取最新统计信息：
+
+最新发布：http://www.stats.gov.cn/english/PressRelease/rss.xml
+
+数据解读：可通过RSSHub路由 rsshub.app/gov/stats/sj/sjjd 获取中文版
+
+这是唯一提供官方结构化经济数据RSS的政府源，数据权威性最高，完全合规，且仅含统计公报标题和摘要，不涉及任何敏感内容。
+
+6.2 财经媒体经济频道
+财新网经济频道：关注宏观经济观察，提供中央经济工作会议、政府工作报告等政策解读
+
+新华财经：国家级金融信息平台，MCP服务矩阵可作为后续OpenApiSource扩展目标
+
+6.3 与分类归属规则的配合
+架构文档中板块去重归属规则明确：“宏观实体经济指标归入【经济】；证券、大宗商品、资管交易类归入【财经】”【文档第3.4节】。采集器在打分类标签时，应根据来源类型自动执行此规则：国家统计局、政府经济政策 → 经济类；交易所快讯、券商研报 → 财经类。
+
+七、RSSHub路由（补充方案）
+对于没有原生RSS的网站，RSSHub是社区维护的开源RSS生成工具，覆盖微博、知乎、B站、36氪、澎湃新闻等数百个平台。
+
+可用RSSHub镜像源（国内访问较优）：
+
+https://rss.injahow.cn（默认优先）
+
+https://rsshub.rssforever.com
+
+https://rsshub.cry33.com
+
+重要合规提示：RSSHub将网页内容转换为RSS，本质上仍然是抓取公开页面。使用RSSHub路由时，仍需在采集器中执行Robots 强制校验和RateLimit 限速，不得因使用RSSHub而绕过robots.txt或增加请求频率。建议仅将RSSHub作为补充方案，优先使用原生RSS和开放API。
+
+八、数据源汇总与接入优先级
+优先级	分类	推荐源	接入方式	合规要点
+P0	综合	人民网RSS、新华网RSS	RSS Atom	稿源名单内，仅元数据
+P0	政治	人民网时政、新华网时政、中国政府网	RSS/HTML	严格限定稿源名单
+P0	经济	国家统计局RSS	RSS Atom	官方数据，完全合规
+P1	科技	少数派、爱范儿、IT之家、Solidot	RSS Atom	原生RSS，直接接入
+P1	财经	财联社/东财/同花顺（本地转换）	Open API→RSS	公开接口，无登录
+P1	军事	中国军网、人民网军事频道	RSS/HTML	绑定更严格过滤规则
+P2	科技	36氪、虎嗅、量子位、机器之心	RSSHub/RSS	通过RSSHub获取
+P2	财经	新华财经MCP	Open API	需确认个人访问权限
+所有数据源接入后，均须经过架构文档定义的合规过滤组件（入库前强制拦截）和去重归一组件（URL标准化 + SimHash指纹），违规内容仅记录filter_logs的content_hash和reason_code，绝不落地原文。
