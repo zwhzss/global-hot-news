@@ -1,0 +1,61 @@
+# 版权与许可声明 / Copyright and License Notice
+
+Copyright (c) 2026 zwhzss
+
+本仓库全部源代码、文档、界面资源与配置（以下合称"本软件"）由作者独立开发，
+仅按下列条款授权公开，不是开源许可证。
+
+## 允许（个人学习与教育用途）
+
+- 在本地复制、阅读、编译、运行、修改本软件，用于个人学习、教学演示或学术研究；
+- 基于学习目的进行二次开发与实验，结果仍限个人使用；
+- 分发本仓库副本时，须完整保留本声明与版权行。
+
+## 须事先获得作者书面授权
+
+任何商业用途，包括但不限于：
+
+- 销售、订阅、付费分发，或将其作为商品的一部分交付；
+- 以 SaaS、网站、托管服务、企业内生产部署等对外或营利方式运行；
+- 集成、封装或改写后进入商业产品、商业服务或商业演示环境；
+- 用于营利性的内容聚合、抓取、推送或数据再分发。
+
+上述情形以外的用途一律视为不被授权。
+
+## 使用限制
+
+- 不得移除或修改本声明、版权行与作者署名；
+- 不得用于对外提供采集服务、绕过 robots.txt 或技术保护措施、高频请求第三方服务器；
+  本软件按"单机本地、仅采集公开事实性资讯"设计，任何偏离均须自行合规负责；
+- 本软件不采集或上传用户个人数据；使用者自行填入的模型地址、API Key 与阅读记录
+  仅存于本机，作者不掌握亦不承担相关责任。
+
+## 免责声明
+
+本软件按"现状"提供，不含任何明示或暗示的担保。作者对使用本软件导致的任何损失
+（包括数据丢失、账号封禁、内容版权与合规纠纷）不承担责任。
+
+---
+
+## English Summary
+
+Copyright (c) 2026 zwhzss. All rights reserved except as stated here. This is not an
+open-source license.
+
+Free of charge for **personal study and education only**: you may copy, read, build, run and
+modify the software locally for learning, teaching demonstrations or academic research, and
+may redistribute copies provided this notice and the copyright line are kept intact.
+
+**Any commercial use requires prior written permission from the author** — including selling,
+subscription or paid distribution; running it as a SaaS, hosted or production service;
+bundling it into a commercial product or service; and using it for monetized content
+aggregation, scraping or redistribution.
+
+The software is designed to run on a single local machine and to collect only publicly
+available factual news. Do not use it to bypass robots.txt or technical protection measures,
+or to send high-frequency requests to third-party servers. The software is provided "as is",
+without warranty of any kind, and the author is not liable for any resulting damages.
+
+## 获取商业授权 / Obtaining commercial permission
+
+请通过 GitHub 项目主页联系作者（Issue 或私信），说明用途、部署形态与分发范围。
