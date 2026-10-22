@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"fmt"
 	"io/fs"
 	"log"
 	"mime"
@@ -176,8 +175,7 @@ func main() {
 		// Start the local HTTP API server so external tools can query the app.
 		_, apiServer = router.SetupLocalAPI(cfg.APIPort, cfg.APIToken)
 		go func() {
-			addr := fmt.Sprintf(":%d", cfg.APIPort)
-			log.Printf("Local API server listening on http://127.0.0.1%s", addr)
+			log.Printf("Local API server listening on http://127.0.0.1:%d", cfg.APIPort)
 			if err := apiServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Printf("Warning: local API server failed: %v", err)
 			}

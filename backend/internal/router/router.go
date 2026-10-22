@@ -35,7 +35,9 @@ func SetupLocalAPI(port int, token string) (*gin.Engine, *http.Server) {
 	}
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
+		// Loopback only: the app must never be reachable from the LAN
+		// (需求.md forbids serving anything outside this machine).
+		Addr:         fmt.Sprintf("127.0.0.1:%d", port),
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
