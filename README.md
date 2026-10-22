@@ -28,6 +28,7 @@ Windows 本地单机桌面资讯聚合应用：抓取全球公开 RSS 源，按�
 - **中英双语生成**：标题与摘要可自动互译，引擎可选本地大模型（Ollama / LM Studio）、
   MTransServer、LibreTranslate 或商用 API；只翻译标题摘要，不抓正文
 - **语音播报**：抓取完成后异步生成本地 TTS 音频，播放器常驻底栏，支持自动连播
+  （由 Python 的 `edge-tts` 驱动，需 `>=7.3.1`）
 - **数据源管理**：增删改查、连通性测试、手动抓取、启停，内置国内可访问源种子数据
 - **任务监控**：批量翻译等长任务的进度、事件流与取消控制
 - **合规内建**：遵守 robots.txt、限速加随机抖动、按规则过滤评论/深度报道/图片版权内容，
@@ -66,7 +67,8 @@ build-desktop.bat        一键构建 + 打包脚本
 - Go 1.22+、Node.js 18+、`go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - C 编译器（CGO，`go-sqlite3` 需要）：MSYS2 `gcc`，脚本会自动探测
   `C:\msys64\ucrt64\bin`、`C:\msys64\mingw64\bin` 与 WinGet 目录
-- Python 3.10+（仅运行 RSS 桥接时需要）
+- Python 3.10+（仅运行 RSS 桥接与语音播报时需要；语音播报要求 `edge-tts>=7.3.1`，
+  更早的版本仍在使用已被微软废弃的 v1 `Sec-MS-GEC` 令牌，握手会被直接 403 拒绝）
 
 ## 构建与运行
 

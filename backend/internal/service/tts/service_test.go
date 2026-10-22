@@ -287,7 +287,10 @@ func TestRoundCompleteSynthesisesConcurrently(t *testing.T) {
 // The api engine must speak the OpenAI-compatible protocol: POST
 // <url>/audio/speech with a bearer token and JSON body, mp3 bytes back.
 func TestRoundCompleteUsesAPIEngine(t *testing.T) {
-	type capture struct{ auth string; body string }
+	type capture struct {
+		auth string
+		body string
+	}
 	got := make(chan capture, 4)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/audio/speech" {
@@ -531,4 +534,24 @@ func TestRoundContextPropagation(t *testing.T) {
 
 func itoa(u uint) string {
 	return strconv.Itoa(int(u))
+}
+
+func TestEdgeTTSVersionOld(t *testing.T) {
+	cases := map[string]bool{
+		"7.2.8":         true, // sends the retired v1 Sec-MS-GEC token
+		"7.3.0":         true,
+		"7.3.1":         false, // first v2 token release
+		"7.3.9":         false,
+		"7.4":           false,
+		"8.0.0":         false,
+		"7.3.1.dev1":    false,
+		"":              false, // unparseable must never block working synthesis
+		"unknown":       false,
+		"not-a-version": false,
+	}
+	for got, want := range cases {
+		if old := edgeTTSVersionOld(got); old != want {
+			t.Errorf("edgeTTSVersionOld(%q) = %v, want %v", got, old, want)
+		}
+	}
 }

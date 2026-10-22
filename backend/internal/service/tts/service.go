@@ -73,12 +73,13 @@ type Service struct {
 	// a fake so the round state machine is testable offline.
 	generate func(ctx context.Context, text, dst string) error
 
-	mu           sync.Mutex
-	cancel       context.CancelFunc // halts the round in flight when a newer one starts
-	python       string             // resolved interpreter (edge engine only)
-	pythonProbed bool               // probing once per process: a failed probe is cached too
-	status       Status
-	playlist     []PlaylistItem
+	mu            sync.Mutex
+	cancel        context.CancelFunc // halts the round in flight when a newer one starts
+	python        string             // resolved interpreter (edge engine only)
+	pythonVersion string             // edge-tts version that interpreter reports
+	pythonProbed  bool               // probing once per process: a failed probe is cached too
+	status        Status
+	playlist      []PlaylistItem
 }
 
 func NewService(db *gorm.DB, mediaDir string) *Service {
@@ -249,10 +250,24 @@ func (s *Service) preflight() error {
 		}
 		return nil
 	}
-	if s.resolvePython() == "" {
-		return fmt.Errorf("python not found; set tts_python in settings")
+	_, err := s.edgeReady()
+	return err
+}
+
+// edgeReady resolves the interpreter and rejects an edge-tts build too old for
+// the handshake Microsoft currently accepts.
+func (s *Service) edgeReady() (string, error) {
+	python := s.resolvePython()
+	if python == "" {
+		return "", fmt.Errorf("python not found; set tts_python in settings")
 	}
-	return nil
+	s.mu.Lock()
+	version := s.pythonVersion
+	s.mu.Unlock()
+	if edgeTTSVersionOld(version) {
+		return "", fmt.Errorf("edge-tts %s is too old: Microsoft rejects the retired v1 Sec-MS-GEC token with HTTP 403. Upgrade it: %s -m pip install -U \"edge-tts>=%s\"", version, python, minEdgeTTSVersion)
+	}
+	return python, nil
 }
 
 // engine returns the configured synthesis engine: "edge" (free, local CLI)
@@ -506,9 +521,9 @@ func (s *Service) dispatch(ctx context.Context, text, dst string) error {
 	if s.engine() == "api" {
 		return s.apiTTS(ctx, text, dst)
 	}
-	python := s.resolvePython()
-	if python == "" {
-		return fmt.Errorf("python not found; set tts_python in settings")
+	python, err := s.edgeReady()
+	if err != nil {
+		return err
 	}
 	voice := s.setting("tts_voice", "zh-CN-XiaoxiaoNeural")
 	return s.edgeTTS(ctx, python, voice, text, dst)
@@ -544,7 +559,14 @@ func (s *Service) edgeTTS(ctx context.Context, python, voice, text, dst string) 
 			_ = os.Remove(dst)
 			return ctx.Err()
 		}
-		return fmt.Errorf("edge-tts failed: %v: %s", err, clip(string(out), 300))
+		msg := clip(string(out), 300)
+		if strings.Contains(msg, "403") {
+			// An empty-body 403 means the token generation was retired again,
+			// or this machine's clock sits outside the 5-minute window the
+			// service accepts. Both look identical to the user: no audio.
+			msg += ` | handshake rejected: run pip install -U "edge-tts>=` + minEdgeTTSVersion + `" and check the system clock`
+		}
+		return fmt.Errorf("edge-tts failed: %v: %s", err, msg)
 	}
 	return nil
 }
@@ -575,9 +597,9 @@ func (s *Service) apiTTS(ctx context.Context, text, dst string) error {
 		return fmt.Errorf("tts_api_model is empty; set the TTS model in settings")
 	}
 	payload := map[string]string{
-		"model":             model,
-		"input":             text,
-		"response_format":   "mp3",
+		"model":           model,
+		"input":           text,
+		"response_format": "mp3",
 	}
 	if v := strings.TrimSpace(s.setting("tts_api_voice", "")); v != "" {
 		payload["voice"] = v
@@ -645,16 +667,19 @@ func (s *Service) resolvePython() string {
 		`C:\ProgramData\miniconda3_2\python.exe`,
 		`C:\ProgramData\miniconda3\python.exe`,
 	)
-	found := ""
+	found, foundVersion := "", ""
 	for _, c := range candidates {
-		if c == "" || !pythonWorks(c) {
+		if c == "" {
 			continue
 		}
-		found = c
-		break
+		if v := probeEdgeTTS(c); v != "" {
+			found, foundVersion = c, v
+			break
+		}
 	}
 	s.mu.Lock()
 	s.python = found
+	s.pythonVersion = foundVersion
 	s.pythonProbed = true
 	s.mu.Unlock()
 	return found
@@ -664,16 +689,71 @@ func (s *Service) resolvePython() string {
 func (s *Service) InvalidatePythonCache() {
 	s.mu.Lock()
 	s.python = ""
+	s.pythonVersion = ""
 	s.pythonProbed = false
 	s.mu.Unlock()
 }
 
-func pythonWorks(bin string) bool {
+// minEdgeTTSVersion is the first upstream release that sends the v2 Sec-MS-GEC
+// token. Microsoft retired v1 (plain SHA-256 of ticks + client token) in
+// 2026-10: older builds are refused with an empty-body HTTP 403 during the
+// WebSocket handshake, so every article silently yields a zero-byte file.
+const minEdgeTTSVersion = "7.3.1"
+
+// probeEdgeTTS reports the edge-tts version importable by bin, or "" when it
+// cannot run it at all (the WindowsApps store stub on PATH prints nothing).
+func probeEdgeTTS(bin string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, "-c", "import edge_tts")
+	cmd := exec.CommandContext(ctx, bin, "-c", "import edge_tts; print(edge_tts.__version__)")
 	hideConsole(cmd)
-	return cmd.Run() == nil
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// edgeTTSVersionOld reports whether the probed version predates
+// minEdgeTTSVersion. Unparseable versions are treated as current so a future
+// upstream versioning scheme never blocks synthesis that actually works.
+func edgeTTSVersionOld(got string) bool {
+	want := parseSemver(minEdgeTTSVersion)
+	g := parseSemver(got)
+	if len(g) == 0 {
+		return false
+	}
+	for i := range want {
+		if i >= len(g) {
+			return true
+		}
+		if g[i] != want[i] {
+			return g[i] < want[i]
+		}
+	}
+	return false
+}
+
+func parseSemver(v string) []int {
+	var out []int
+	for _, part := range strings.Split(strings.TrimSpace(v), ".") {
+		n, digits := 0, 0
+		for _, ch := range part {
+			if ch < '0' || ch > '9' {
+				break
+			}
+			n = n*10 + int(ch-'0')
+			digits++
+		}
+		if digits == 0 {
+			break
+		}
+		out = append(out, n)
+		if len(out) == 3 {
+			break
+		}
+	}
+	return out
 }
 
 // speakText flattens the article into one speakable line: title, then summary
